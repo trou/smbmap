@@ -605,9 +605,9 @@ class SMBMap():
             '''
             return smbconn
 
-        except Exception as e:
+        except SessionError as e:
             if self.verbose:
-                print('[!] Authentication error on %s' % (host))
+                print('[!] Authentication error ({}) on {}'.format(e, host))
             return False
 
     def logout(self, host):
@@ -1168,9 +1168,9 @@ def login(host, doKerberos=False):
         
         return smbconn
 
-    except Exception as e:
+    except SessionError as e:
         if VERBOSE:
-            print('[!] Authentication error on {}'.format(host['ip']))
+            print('[!] Authentication error ({}) on {}'.format(e, host['ip']))
         return False
 
 if __name__ == "__main__":
