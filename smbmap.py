@@ -48,6 +48,7 @@ PERM_DIR = ''.join(random.sample('ABCDEFGHIGJLMNOPQRSTUVWXYZ', 10))
 PSUTIL_DIR= 'psutils'
 PSUTIL_SHARE = ''.join(random.sample('ABCDEFGHIGJLMNOPQRSTUVWXYZ', 10))  
 VERBOSE = False
+KERBEROS = False
 USE_TERMCOLOR=True
 SEND_UPDATE_MSG=True
 
@@ -588,9 +589,11 @@ class SMBMap():
         try:
             if port == 445:
                 smbconn = SMBConnection(host, host, sess_port=445, timeout=4)
-                smbconn.login(username, password, domain, lmhash, nthash)
             else:
                 smbconn = SMBConnection('*SMBSERVER', host, sess_port=139, timeout=4)
+            if KERBEROS:
+                smbconn.kerberosLogin(username, password, domain, lmhash, nthash)
+            else:
                 smbconn.login(username, password, domain, lmhash, nthash)
             '''
             if self.smbconn[host].isGuestSession() > 0:
@@ -1055,10 +1058,10 @@ class SMBMap():
             if self.loading:
                 self.kill_loader()
             if mode == 'wmi':
-                executer = WMIEXEC(username=self.hosts[host]['user'], password=self.hosts[host]['passwd'],  hashes=hashes, share=share, command=command, scr_output=disp_output)
+                executer = WMIEXEC(username=self.hosts[host]['user'], password=self.hosts[host]['passwd'],  hashes=hashes, share=share, command=command, scr_output=disp_output, doKerberos=KERBEROS)
                 result = executer.run(host)
             else:
-                executer = CMDEXEC(username=self.hosts[host]['user'], password=self.hosts[host]['passwd'],  hashes=hashes, share=share, command=command)
+                executer = CMDEXEC(username=self.hosts[host]['user'], password=self.hosts[host]['passwd'],  hashes=hashes, share=share, command=command, doKerberos=KERBEROS)
                 result = executer.run(host_name, host)
             return result
         except:
@@ -1151,14 +1154,17 @@ def find_open_ports(address):
     except Exception as e:
         return False
 
-def login(host):
+def login(host, doKerberos=False):
     try:
         if host['port'] == 445:
             smbconn = SMBConnection(host['ip'], host['ip'], sess_port=host['port'], timeout=10)
         else:
             smbconn = SMBConnection('*SMBSERVER', host['host'], sess_port=host['port'], timeout=10)
         
-        smbconn.login(host['user'], host['passwd'], host['domain'], host['lmhash'], host['nthash'])
+        if KERBEROS:
+            smbconn.kerberosLogin(host['user'], host['passwd'], host['domain'], host['lmhash'], host['nthash'])
+        else:
+            smbconn.login(host['user'], host['passwd'], host['domain'], host['lmhash'], host['nthash'])
         
         return smbconn
 
@@ -1188,6 +1194,7 @@ if __name__ == "__main__":
     sgroup.add_argument("-s", metavar="SHARE", dest='share', default='C$', help="Specify a share (default C$), ex 'C$'")
     sgroup.add_argument("-d", metavar="DOMAIN", dest='domain', default="WORKGROUP", help="Domain name (default WORKGROUP)")
     sgroup.add_argument("-P", metavar="PORT", dest='port', type=int, default=445, help="SMB port (default 445)")
+    sgroup.add_argument("-k", dest='kerberos', default=False, action='store_true', help="Use Kerberos for auth, set environment variable KRB5CCNAME if you want to use cache")
     sgroup.add_argument("-v", dest='version', default=False, action='store_true', help="Return the OS version of the remote host")
     sgroup.add_argument("--admin", dest='admin', default=False, action='store_true', help='Just report if the user is an admin') 
     sgroup.add_argument("--no-banner", dest='nobanner', default=False, action='store_true', help='Removes the banner from the top of the output') 
@@ -1343,6 +1350,8 @@ if __name__ == "__main__":
 
     if args.admin:
         mysmb.verbose = False
+    if args.kerberos:
+        KERBEROS = True
     
     connections = []
     login_worker = Pool(40)
