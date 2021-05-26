@@ -1200,6 +1200,7 @@ if __name__ == "__main__":
     sgroup.add_argument("--no-banner", dest='nobanner', default=False, action='store_true', help='Removes the banner from the top of the output') 
     sgroup.add_argument("--no-color", dest='nocolor', default=False, action='store_true', help='Removes the color from output') 
     sgroup.add_argument("--no-update", dest='noupdate', default=False, action='store_true', help='Removes the "Working on it" message') 
+    sgroup.add_argument("--debug", dest='debug', default=False, action='store_true', help='Debug messages')
 
     sgroup2 = parser.add_argument_group("Command Execution", "Options for executing commands on the specified host")
 
@@ -1238,6 +1239,9 @@ if __name__ == "__main__":
         sys.exit(1)
 
     args = parser.parse_args()
+
+    if args.debug:
+        logging.basicConfig(level=logging.DEBUG)
 
     signal.signal(signal.SIGINT, signal_handler)
 
